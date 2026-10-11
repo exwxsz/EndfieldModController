@@ -6014,3 +6014,59 @@ il2cpp 符号从 `Endfield_Data\il2cpp_data\Metadata\global-metadata.dat`（57 M
 ⚠️ **2026-10-07 实测补充**：本机 `web_fetch https://github.com/...` 会被直接拒绝，报 `URL hostname "github.com" resolves to a non-public IP address`（疑似加速器改了域名解析）—— 所以**查/取 GitHub 一律走 gh CLI 或 git**（`gh api`、`gh repo view`、`git clone/fetch`），别用 web_fetch；要看仓库文档就 fetch raw.githubusercontent.com 或直接读本地已有 clone。
 
 `关键词：["Steam++加速器", "Watt Toolkit", "网络环境", "GitHub大文件", "连接超时", "依赖加速器", "按需启用", "用完马上关掉", "不要常驻", "裸网测试"]`
+
+<!-- 增量追加 2026-10-11 23:04 · 新增 5 条（历史条目一律保留）-->
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 【modecontroller 当前状态唯一真源】（20…
+*2026-10-11 22:54*
+
+【modecontroller 当前状态唯一真源】（2026-10-11 22:55 更新）
+**Latest Release = `v1.2.3`**（2026-10-11 发；1.2.3-beta 是 10-09 的预发布）。**本地 = `1.2.4-beta`**。**main = `bd237fb`**（已推，只推源码、未发版）。快照 `D:\zmdmod\_snapshot_1.2.4-beta-20261011-225352`（提示"没定位到游戏目录"—— 当时 `config.game_exe` 指的 `D:\Hypergryph Launcher\games\Endfield Game\Endfield.exe` 没定位到，回溯价值有限）。
+**1.2.4-beta 内容（只此一项）**：随包组件版本表同步上游最新 —— `component_versions.json` 里 XXMI `v2.4.1→v2.4.6`、Poser `0.5.57→0.5.58`（另外四项核对后本来就一致：XXMI-Libs v1.2.2 / EFMI v1.4.8 / ReShade 6.8.0 / 乳摇 3.1.2）。
+**本地已装组件也同步到位**：`runtime\builtin\XXMI` = v2.4.6、`runtime\poser` = v0.5.58（`AppConfig.load()` + `ensure_xxmi/ensure_poser(force=True)`，脚本 `_tmp\scratch\sync_upstream.py`）。
+**1.2.3 里发出去的东西**：诊断包「机器侧稳定性」段（`kernel_instability.py`）。
+**下一步**：发版时去掉 beta（`1.2.4`）；本次没构建 exe。
+
+`关键词：["modecontroller 状态","最新 Release v1.2.2","1.2.3-beta","main f8e0368","机器侧稳定性","kernel_instability","System 日志","蓝屏 BugCheck","非正常关机","诊断包","快照","下一个版本号"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 【modecontroller 待办（2026-10-1…
+*2026-10-11 22:54*
+
+【modecontroller 待办（2026-10-11 22:55 更新）】
+① **等 issue #16（xingluo667）回报** —— 他与华硕那台 `0xC0000135` 的真因仍未定案（已排除：显卡驱动 / VC++ 运行库 / 注入未进进程 / 旧版 Streamline）。
+② 改了后端源码要补 normify 结构树四步（`normify_realign.py --apply` → `module_refresh(all=true,activate=true)` → `validate` 0 error → `build`+`render`）；`push.py` 只同步镜像、不重算。
+③ 商城的「已安装」标记依赖 `download-info.json`（只有本程序下载过的才有）—— 手工/整合包放进库的 Mod 不亮卡片是**正确行为**。
+④ **sbm.dll / sbm-fork 那条线（2026-10-11 核实）**：上游 main = 3.1.2（`8f20b05`）= 他 fork 的 origin/main，**没有新东西可同步**；本地 main 领先 6 个提交 = 上游 **PR #4**（ABCwewe，OPEN 未合并）。要继续推进得自己维护（PR 内容已在本地那份）。
+⑤ MMD 播放测试（Poser 侧）与提弗洛斯运动数值三选一（sbm 侧）仍未做。
+⑥ **modtest 已含源码**（robocopy，2026-10-11）：其 `mod-backup` 里被顺带混进工作区那份 ~8 GB 副本（两边同名、时间戳一致，**无法精确回滚**）；以后同步别带 `mod-backup`。
+**下一个号**：`1.2.4-beta`；发版时去掉 beta。
+
+`关键词：["项目待办","issue 16 等回报","0xC0000135 未定案","结构树四步","download-info.json 已安装不亮","sbm-fork 是否对齐上游","MMD 播放测试","提弗洛斯数值三选一","下一个号 1.2.2-beta"]`
+
+<!-- lesson · 经验教训（被纠正过的、踩过的坑） -->
+### 脚本里调项目管理器代码时，`AppConfig()` 直…
+*2026-10-11 22:54*
+
+脚本里调项目管理器代码时，`AppConfig()` 直接构造是空壳，末尾的 `config.save()` 会抛 ValueError（"save() called without a path and without a loaded config file"）；必须用 `AppConfig.load()` 才会读数据根的 config.json。
+
+`关键词：["AppConfig.load","AppConfig 空壳","config.save ValueError","脚本调用 runtime_deps","数据根 config.json","ensure_xxmi","无头调用"]`
+
+<!-- lesson · 经验教训（被纠正过的、踩过的坑） -->
+### 【同步 / 核验 modtest 与仓库的正确做法（20…
+*2026-10-11 22:57*
+
+【同步 / 核验 modtest 与仓库的正确做法（2026-10-11 实测）】**别用 robocopy 整目录**：`/XD dist` 是按目录名匹配（任意层级），会把 `web\dist` 一起排除（前端产物缺失 ⇒ 源码版界面打不开）；还会把 `mod-backup`（8 GB 纯运行时产物）带进测试目录。
+**正确做法 = 按 `git -c core.quotepath=false ls-files` 的清单逐文件复制/比对**（只碰仓库跟踪的文件，本仓库 643 个；先比 size 再比 bytes）。核验口径：① 跟踪文件里「缺失 / 内容不同」必须为 0；② modtest 里「仓库没有的文件」只剩运行/构建产物才算正常（exe、config.json、*.obj、*.bak-*、frontend/src/demo-state.json、scripts/mc_bootstrap.dll）。
+参考实现：`_tmp\scratch\verify_modtest.py`（核验）+ `_tmp\scratch\sync_repo_to_modtest.py`（同步）。切记同步要在**改完源码/版本号之后**再跑，否则测试副本又落后（本次就是先同步后改版本号，出现 6 个不同 + 2 个缺失）。
+
+`关键词：["modtest 与仓库一致性","git ls-files 逐文件同步","robocopy 整目录的坑","web/dist 被误排除","quotepath=false 中文路径","核验测试副本","mod-backup 不要同步","同步要在改完源码之后","config.json 运行数据","643 个跟踪文件"]`
+
+<!-- fact · 事实（细碎的原子信息） -->
+### sbm-fork（D:\zmdmod\sbm-fork，…
+*2026-10-11 22:54*
+
+sbm-fork（D:\zmdmod\sbm-fork，2026-10-11 核实）：origin = 他自己的 fork `jing-hy/Arknights-Endfield-Plugin-Secondary-bodyphysics`，本次新加 upstream = `Sp1cHless/Arknights-Endfield-Plugin-Secondary-bodyphysics`。上游 main = `8f20b05`「Version 3.1.2」= 他 fork 的 origin/main（两边同号，无新提交）；**本地 main = `bed7468`，领先 6 个提交**，内容是上游 **PR #4**（作者 ABCwewe <zanjj@foxmail.com>，2026-09-07 开、`state=OPEN` 未合并，标题「每角色/步态的相位对齐(PLL)与自动频率对齐,以及拟合频率的跨角色/步态持久复用」）。上游最新 Release = 3.1.2「Jump update + import fix」（tag `Endfield-1.5-available`，2026-10-04）。
+
+`关键词：["sbm-fork","SecondaryMotion fork","Sp1cHless 上游","PR #4","ABCwewe","PLL 相位对齐","上游 main 3.1.2","8f20b05","Endfield-1.5-available","乳摇源码仓库"]`
