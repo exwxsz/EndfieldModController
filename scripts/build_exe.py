@@ -23,6 +23,26 @@ import os
 import shutil
 import subprocess
 import sys
+
+
+def _fix_console() -> None:
+    """把 stdout/stderr 切成 UTF-8 —— 否则**非中文 Windows** 上 print 中文会直接崩。
+
+    实测（2026-10-10，GitHub Actions 的 windows-latest）：那里的 stdout 是 **cp1252**，
+    `print("打包命令：…")` 抛 `UnicodeEncodeError` ⇒ **PyInstaller 还没开始跑就被打断**，
+    整条 CI 变红（与 `scripts/test_addon_hook.py` 是同一个坑）。
+    与 `build_release.py` / `run_tests.py` 同一做法（本文件原先漏了）。
+    （CI 里已额外设 `PYTHONIOENCODING=utf-8` 兜底；这里补上是为了本地手动跑也稳。）
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+        except Exception:  # noqa: BLE001
+            pass
+
+
+_fix_console()
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -19,6 +19,13 @@ jobs:
     name: 全量测试
     runs-on: windows-latest
     timeout-minutes: 40
+    env:
+      # ⚠️ **关键**：Windows runner 的 stdout 是 **cp1252**，而本仓库不少脚本会 print 中文。
+      # 实测崩过两次、且都是"活儿全干对了、只是最后那句中文 print 抛 UnicodeEncodeError"：
+      #   * `scripts/test_addon_hook.py`（21 项断言全过，脚本仍以退出码 1 收场）
+      #   * `scripts/build_exe.py`（`print("打包命令：…")`）
+      # 设了它，**所有** Python 子进程的 stdout/stderr 一律 UTF-8，不必逐个脚本去补 reconfigure。
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +57,13 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 40
+    env:
+      # ⚠️ **关键**：Windows runner 的 stdout 是 **cp1252**，而本仓库不少脚本会 print 中文。
+      # 实测崩过两次、且都是"活儿全干对了、只是最后那句中文 print 抛 UnicodeEncodeError"：
+      #   * `scripts/test_addon_hook.py`（21 项断言全过，脚本仍以退出码 1 收场）
+      #   * `scripts/build_exe.py`（`print("打包命令：…")`）
+      # 设了它，**所有** Python 子进程的 stdout/stderr 一律 UTF-8，不必逐个脚本去补 reconfigure。
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
 
