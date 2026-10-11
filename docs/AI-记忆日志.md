@@ -5882,3 +5882,135 @@ EMC 在 `D:\emc` 工作区构建：命令 `python scripts/build_release.py --ski
 本机（用户机器，性能较差）的测试/构建规矩（2026-10-10 定稿）：① 构建与测试是两个独立脚本——`scripts/build_release.py`（默认不跑测试，加 `--with-tests` 才跑）、`scripts/run_tests.py`；不并行做这两件事。② **并发策略按"要跑多少"决定**：全量（测试文件数 > 12）**一律单线程** —— 这套测试是文件 IO 密集型，实测 `-n 4` 跑全量 18 分钟仍未完成、单线程约 15 分钟（并行 worker 互相拖）；只有**小范围**（≤12 个文件）才看 CPU 占用，< 30% 时用 `-n 4`。`--serial` 强制单线程、`-n N` 完全听用户的、没装 xdist 自动降级。③ **日常改动用 `run_tests.py --changed`**（按 git diff 挑相关测试，通常几十秒）；**发版构建必须跑全量**（`build_release.py --with-tests`）——用户 2026-10-10：「上次是没时间了，发版构建还是要跑一下全量测试的」。④ **长任务（构建、全量测试、上传附件）一律放后台 job**，别占着前台等；后台任务的命令**不要用管道缓冲输出**（`| Select-Object -Last N` 会看不到进度）。
 
 `关键词：["全量测试","run_tests.py","--changed","build_release.py","并发策略","单线程","IO 密集","30% 阈值","发版构建","长任务放后台","机器性能差"]`
+
+<!-- 增量追加 2026-10-11 22:53 · 新增 11 条（历史条目一律保留）-->
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 【modecontroller 当前状态唯一真源】（20…
+*2026-10-07 22:33*
+
+【modecontroller 当前状态唯一真源】（2026-10-07 22:35 更新）
+**Latest Release = `v1.2.2`**。**本地 = `1.2.3-beta`**（攒了新改动）。**main = `f8e0368`**（已推，只推源码、未发版）。快照 `D:\zmdmod\_snapshot_1.2.3-beta-20261007-223312`。
+**1.2.3-beta 内容（只此一项）**：诊断包新增「机器侧稳定性」段 —— 读 System 日志 30 天窗口的蓝屏（BugCheck 1001）、非正常关机（Kernel-Power 41 / EventLog 6008）、WHEA、关机发起者（User32 1074），渲染成分类统计 + 时间轴。此前只采 Application 日志，System 侧 0 条（实测一份 283 项的包里 Provider 只有 WER 与 RestartManager）。落点 `endfieldmodcontroller/kernel_instability.py`（390 行）+ `diagnostics.collect_environment_report()` 挂载；测试 `tests/test_kernel_instability.py`（27 条）；`pytest tests -q -n 4` = 1274 passed。
+**定位（用户拍板前我与其约定）**：**只作背景判据，不参与 `crashwatch` 的任何归因优先级**；采集失败如实写"没查到"，绝不渲染成"机器是稳的"；文本里写明"相关不等于因果"。理由见那条「外部反馈档案的归因错位」记忆。
+**下一步**：发版时去掉 beta（`1.2.3`）；没构建 exe（用户明确说"不要构建，只推 main"）。
+
+`关键词：["modecontroller 状态","最新 Release v1.2.2","1.2.3-beta","main f8e0368","机器侧稳定性","kernel_instability","System 日志","蓝屏 BugCheck","非正常关机","诊断包","快照","下一个版本号"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 《终末地》解包工具链已就位：`D:\zmdmod\终末地…
+*2026-10-07 23:01*
+
+《终末地》解包工具链已就位：`D:\zmdmod\终末地解包\`（EIHRTeam/EndfieldStudio，本地 commit ccf769b，2026-09-06 拉的；含源码+已编译 endfield-dump.dll + 便携 .NET 9 SDK 9.0.317 在 `dotnet9\` + 包装脚本 `dump.cmd`，其 `--vfs` 已内置）。
+游戏资源目录 `D:\Hypergryph Launcher\games\Endfield Game\Endfield_Data\StreamingAssets`（version=24577065 codeVersion=4）。
+实测性能（Ryzen 16 核）：`extract` 带 `--asset-name` 过滤仍会解压全部 253,670 个 bundle、7,014,489 个对象，约 **108 秒**（输出由过滤正则决定）；`dump --block Lua` 1338 文件数秒（1 个文件解密失败属正常）；`list` 数秒。
+**能力边界**：只导得出 Texture2D（`--types` 形同虚设，Material/Shader/Mesh/ScriptableObject 一律导不出）；AnimationClip 只出元数据（关键帧是 ACL `0xac11ac11` 未实现）；无 hot-update 目录 ⇒ `audio` 拿不到角色语音/剧情音频。
+il2cpp 符号从 `Endfield_Data\il2cpp_data\Metadata\global-metadata.dat`（57 MB）提：UTF-8 取串后按关键词 grep，能拿到全部类名/方法名/shader 属性名 —— 排查游戏机制最快的入口。
+
+`关键词：["终末地解包","EndfieldStudio","endfield-dump","dump.cmd","StreamingAssets","VFS解密","global-metadata.dat","il2cpp符号","dotnet9","贴图导出","Texture2D","解包工具位置"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 《终末地》技术知识库 —— **注意：Mod 管理器的开…
+*2026-10-07 23:02*
+
+《终末地》技术知识库 —— **注意：Mod 管理器的开发、发布与交付规则全在 modecontroller 项目**；本 project 只沉淀"游戏本身"的知识（注入机制、运行库基线、资源与机制调查）。
+**路径**：游戏 `D:\Hypergryph Launcher\games\Endfield Game`；原独立目录 `D:\zmdmod\XXMI2`（XXMI 2.2.1 + EFMI 1.4.7）与 `D:\zmdmod\DLSS5` 已内嵌为 `modecontroller\runtime\builtin\XXMI` 与 `modecontroller\runtime\dlss5`（原目录只作素材来源）。
+**三件套（DLSS5 + 服装 Mod + 第一人称 enhancer）核心机制**（来源 B站 BV1XMh76UEA5，UP 原话「原理很简单，在xxmi Launcher注入dlss5和mod，然后合并dlss5和enhancer（第一人称）的reshade」）：
+① **一个游戏进程只能有一个 ReShade 底座** —— 两个 d3d12/dxgi 底座同注入会模块名撞车，后果是 EFMI 加载失败、enhancer 不启动；
+② 做法 = XXMI「设置→高级→注入库」**只填两条**（DLSS5 的 `d3d12.dll` + EFMI 的 `d3d11.dll`）；把 `renodx-endfield-enhancer.addon64` 拷进 DLSS5 目录；把第一人称 ini 的整个 `[endfield-enhancer]` 段粘进 DLSS5 的 `ReShade.ini` **最上面一层**（UP 强调"复制到中间不行"，`[GENERAL]` 用 DLSS5 那份）；游戏本体目录里的旧 ReShade/enhancer 文件全部移走。成功标志 = 按 Home 后插件页同时有 **RenoDX-DLSS5** 与 **Endfield Enhancer**；
+③ EFMI 靠 `d3dx.ini` 的 `[Loader] loader = XXMI Launcher.exe` 注入 `d3d11.dll`，**不往游戏目录放 dll**；乳摇走的是"替换游戏目录 dll"的另一套机制（见同项目 ops 条）。
+
+`关键词：["三件套","注入机制","ReShade底座只能一个","XXMI注入库两条","EFMI loader","第一人称enhancer","endfield-enhancer 段位置","renodx addon64","内嵌组件","游戏技术知识库","BV1XMh76UEA5"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 终末地**游戏内面板与快捷键速查**（来自 BV1XMh…
+*2026-10-07 23:02*
+
+终末地**游戏内面板与快捷键速查**（来自 BV1XMh76UEA5，排查与写配置时的参考）：
+**Enhancer 的 Camera 页顺序**：Camera Controls 必须先 On（否则用不了）→ First Person On → **Third Person During Combat 必须选 Off**（否则打 boss 会被强制退出第一人称）→ EFMI/XXMI Compatibility 勾上 → FOV 60~90（跑图 60、打 boss 80）。
+**DLSS5 页**：勾「启用超分 (WIP)」（要一段适应时间）、NR 风格选「电影」（游戏本身偏写实，自然/电影更不易偏黑）、总体强度与结构强度拉满、局部色彩给一点、角色/皮肤结构 ≥0。
+**快捷键**：`Home` = ReShade 面板、`F6` = 神经渲染(NR)开关、`F11` = Mod 显示开关、`,`（逗号）= 第一人称、`F12` = EFMI 帮助。⚠️ **F1..F12 用户在游戏内都有实际用途，做注入/发键方案时不要占用**。
+只做前两步（DLSS5 + 服装 Mod、不开第一人称）也能正常玩。
+
+`关键词：["游戏内设置","Enhancer Camera页顺序","Third Person During Combat 选Off","第一人称FOV 60-90","DLSS5页设置","NR风格电影","快捷键 Home F6 F11 F12","逗号第一人称","不要占用F1-F12","面板配置参考"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 终末地**游戏目录注入基线与运行库事实**（排障必备）：…
+*2026-10-07 23:02*
+
+终末地**游戏目录注入基线与运行库事实**（排障必备）：
+① **原生基线**：`d3dcompiler_47.dll` 4,524,496 B、`vulkan-1.dll` 831,488 B、`nvngx_dlss.dll` 54,779,504 B；游戏目录**不放** `d3d11.dll`/`dxgi.dll`/`d3d12.dll`（EFMI 由 XXMI Launcher 注入）。
+② **乳摇（SecondaryMotion）注入** = 把 `d3dcompiler_47.dll`(14,336 B proxy) + `vulkan-1.dll`(35,328 B proxy) 替换进游戏目录（原版存同名 `.bak`）并加载 `plugin\sbm.dll`；proxy 内是 loader，用 MinHook hook Unity IL2CPP 的 `AnimatorMono.PreLateTick` / `NPCCPUAnimator.LateTick` 直接读写骨骼 Transform；数据目录 = 游戏目录 `\SecondaryMotion`（日志 `plugin\sbm_log.txt`、`plugin\breast_probe_log.txt`）；按角色开关写 `SecondaryMotion\presets\User.json`，Apply 后 Manager 重写 `runtime\config.json` 的 revision；**不在支持表内的角色 fail-closed 不干预**。⚠️ **版本号与支持角色表不写死**（2026-09-27 核实为 v2.3.5 / 19 个角色，其后已换代，现随包用上游 3.1.2 成品）。
+③ **`nvngx_dlssnr.dll` 游戏原版没有**（DLSS5 专属，约 165.8 MB）：现由管理器装到 `runtime\dlss5\` 并按 GPU 架构选变体（official sm_120 / sf / rtx40），**游戏目录不放它**；而把新版 `nvngx_dlss.dll` 放进**游戏目录**会让游戏起不来（实测），游戏原版备份为 `*.game_original`。
+④ **故障第一嫌疑：`d3dcompiler_47.dll` proxy**（用「卸载乳摇注入」排除）。
+
+`关键词：["游戏目录注入基线","d3dcompiler_47 proxy","vulkan-1 proxy","sbm.dll","AnimatorMono PreLateTick","SecondaryMotion 目录","nvngx_dlssnr","nvngx_dlss 放游戏目录起不来","注入故障第一嫌疑","运行库字节数","乳摇注入"]`
+
+<!-- project · 项目记忆（结构 / 决策 / 部署 / 待办） -->
+### 《终末地》雨雪效果的**实时链路符号落点**（从 glo…
+*2026-10-07 23:02*
+
+《终末地》雨雪效果的**实时链路符号落点**（从 global-metadata.dat 挖出；结论见同项目 topic「人物雨雪是实时计算」，排查/写 mod 时直接搜这些名字）。
+**天气环境**：`Beyond.Gameplay.View.DynamicEnvironmentManager`（ChangeEnvironment / RevertEnvironment / get_isRaining / Tick）；`HG.Rendering.Runtime.HGEnvironmentManager`（_InterpolateVolumes / interpolateTimeFactor / _PipelineUpdate）。
+**湿润（淋雨/下水）**：`Beyond.Gameplay.Water.GameplayWetnessController`（Tick / _OnGameplayWetUpdate / _UpdateWetToMax / ApplyWetnessIntensityToRenderers；参数 gameplayWetIntensity、gameplayWetIntensityToMaxWetnessCurve、gameplayWetIntensityToDrenchSmoothTimeCurve、dryDrenchedAfterSeconds、m_outOfWetTimer）；传感器 `WaterSensorComponent` / `NpcWaterSensorComponent`（OnGameplayWetChange）；角色侧 `CharUIRainEffectMono.ApplyWetnessIntensityToRenderers`、`CharUIModelMono.SetWetIntensity`；动画也可驱动 `CharacterAnimationBlackboard.fWetness`、`SetWetIntensityEventHandler`。
+**积雪**：`Beyond.Gameplay.Water.SnowController`（Tick / _OnSnowingUpdate / _UpdateSnowToMax / ApplySnowIntensityToRenderers；snowIntensity、snowIntensityToMaxSnowAmountCurve、snowIntensityToAccumulateSmoothTimeCurve、meltSnowAfterSeconds、meltSnowSmoothTime、m_outOfSnowTimer）。
+**渲染（每帧）**：`HGRainRenderer.RainAndWetnessPipelineUpdate` / `UpdateRainAndWetnessShaderVariables`；每摄像机 `RainWetnessRenderSeq`（PerFrameClear / _UpdateDeltaTime / _UpdateWetnessShaderVariables / _RequestOcclusionMap → **RainOcclusionMap 是实时遮雨**，站屋檐下不湿）；`HGSnowRenderer.SnowPipelineUpdate`；全局参数 `_RainWetnessGlobalParam0..10`；内置资源 `Runtime/RenderPipelineResources/HGRainPresettingAsset.asset`、`HGSnowPresettingAsset.asset`、`Texture/SnowDetailNormal.tga`、`Mesh/Rain/*.mesh`；shader 变体 `HG_ENABLE_WETNESS` / `HG_RAIN_WETNESS_HIGH_QUALITY` / `SNOW_COVERAGE` / `SNOWFLAKE_KW`。
+**建筑积雪**：`Beyond.Gameplay.Factory.BuildingSnowCoverageProcessor`（_ProcessSnowCoverageNode / _GetCurrentSnowIntensity / poweredSnowCoverageDuration）。
+⚠️ **Lua 侧没有天气逻辑** —— 天气与湿润全在 C#（Beyond.Gameplay.Water / HG.Rendering）。
+
+`关键词：["GameplayWetnessController","SnowController","HGRainRenderer","HGSnowRenderer","RainWetnessRenderSeq","RainOcclusionMap","meltSnowAfterSeconds","dryDrenchedAfterSeconds","DynamicEnvironmentManager","HGSnowPresettingAsset","wetness参数","天气系统落点"]`
+
+<!-- topic · 话题（一件事的前因后果） -->
+### 查清 lzh18 那台 0xC0000135 的真因
+*2026-10-07 22:33*
+
+发起：lzh18（RTX 4060 Laptop / i9-13980HX）那台「游戏随机起不来」的 0xC0000135 真因仍未定案。
+2026-10-07 的现场可分两类，**判据 = `injection-trace` 的 modules 名单里数 `d3d11.dll` 份数 + WER 的 `Sig[3]`（故障模块）/`Sig[6]`（异常码）**：
+① 12:40:19 / 12:45:39 两次进程里有**两个** `d3d11.dll`（`…\library\d3d11.dll` + `…\XXMI\EFMI\d3d11.dll`）→ `ACE-Base64.dll` 的 `c0000005`，已由 `ensure_efmi_importer_folder()` 修掉；
+② 17:48:54 / 17:50:59 两次只剩**一份** `d3d11.dll`（模块数 45/65），仍以 `0xC0000135` 退出（活 44 / 37 秒），**未定案**，且 WER 里没有对应报告。
+一位外部反馈者据此主张「机器侧不稳（30 天 6 次 bugcheck、2 次非正常重启）」，但那三份 WER 属第①类，与 0xC0000135 不是同一件事。
+
+`关键词：["lzh18","0xC0000135","STATUS_DLL_NOT_FOUND","双 d3d11 loader","ACE-Base64.dll","c0000005","injection-trace","ensure_efmi_importer_folder","RTX 4060 Laptop","机器侧不稳","未定案"]`
+
+<!-- lesson · 经验教训（被纠正过的、踩过的坑） -->
+### 收到外部反馈者的「修复档案 / PR」时，先核对**它解…
+*2026-10-07 22:33*
+
+收到外部反馈者的「修复档案 / PR」时，先核对**它解释的症状**与**它引用的现场**是不是同一件事（2026-10-07 那次真实档案）。
+案例：一份档案用 WER（故障模块 ACE-Base64.dll、异常码 c0000005、进程内两份 d3d11.dll）去证明「0xC0000135 是机器侧不稳」—— 核现场后：那三份 WER 是**双 loader** 那三次（12:40-12:50，我们当天已定案已修），而真正报 0xC0000135 的两次（17:48/17:50）进程里**只剩一份 d3d11.dll**。
+做法：① 按**异常码 + 时间戳 + 进程内模块名单**逐次对齐，不按「症状像」归类；② 时间相关（非正常关机 → 之后起不来）不足以定因果 —— 蓝屏是**整机**事件，机制上给不出 `STATUS_DLL_NOT_FOUND`；③ **只收它的取证部分，归因结论独立复核**。
+
+`关键词：["外部反馈档案","PR 审查","归因错位","异常码混为一谈","0xC0000135","c0000005","ACE-Base64.dll","双 d3d11 loader","相关不等于因果","诊断包取证"]`
+
+<!-- lesson · 经验教训（被纠正过的、踩过的坑） -->
+### 判"效果是实时计算还是预制素材"：有 Tick、曲线、平…
+*2026-10-07 23:01*
+
+判"效果是实时计算还是预制素材"：有 Tick、曲线、平滑时间、计时器=实时；还要全量按名字搜资源，找不到"成品变体"才敢下结论。
+
+`关键词：["实时计算还是预制贴图","判定判据","Tick曲线平滑时间","计时器","全量搜资源名字","证伪不存在","成品变体资源","解包取证","机制调查","实时与预制对照"]`
+
+<!-- user · 用户偏好与环境（**含个人信息，公开前请自行取舍**） -->
+### 用户把 **EndfieldModController …
+*2026-10-07 23:01*
+
+用户把 **EndfieldModController 开源发布到 GitHub**（仓库 `jing-hy/EndfieldModController`，原话「我晚点打算上传 github」）—— 这件事一直在推进中。
+⚠️ **版本/进展一律不写死在本条**（写死必过时，历史教训：本条曾写着"已发布 v0.3.1、0.3.2 未推送"）；要最新版本状态看 modecontroller 的 ops 条。
+**不变的用户规则（他多次重申、并纠正过我）**：
+① **零配置启动即用**（默认值向开箱可用倾斜）；
+② **与 GitHub 有区别才升版本号**，且**未推送期间只领先一个**（原话纠正：「你都没推github你为什么又变版本号」）；
+③ **推送授权（2026-10-07 已放宽，原话「只是改源码你可以自己推」）**：**只改源码、不发版时可以自行 push main**，不必再逐次问；**发 Release 仍必须等他明确说** —— 他只说「Releases 没更新啊」属于确认事实，**不算发版授权**；推送仍走 `scripts\push.py`（先快照，快照失败就不推）；
+④ 他说要测伪旧版 / 说「帮我发」/ 说「开 goal 继续」时 = **一路做到完成再交付**，不要中途问；
+⑤ 要求 AI **端到端自测、别重复下载**（干净副本复用）。
+项目特定的完整发布与交付规则见 modecontroller 的 rules 条（推送前快照、Release notes 要写 issue 号、资产只推不带版本号的 exe 等）。
+
+`关键词：["上传github", "开源发布EndfieldModController", "没推只领先一个", "未经同意不推送", "发Release要明确说", "确认不算授权", "开goal做到完成", "帮我发就走完整流程", "端到端自测别重复下载", "零配置启动即用", "发布规则"]`
+
+<!-- user · 用户偏好与环境（**含个人信息，公开前请自行取舍**） -->
+### 用户的设备网络环境：访问 GitHub **依赖 Ste…
+*2026-10-07 23:01*
+
+用户的设备网络环境：访问 GitHub **依赖 Steam++（Watt Toolkit）加速器**——关掉它之后直连 GitHub Release 资产会 20 秒超时（WinError 10060），而 github.com / api.github.com / reshade.me 的普通页面请求仍返回 200（即"只有大文件传输被掐断"）。配套偏好（原话）：「在连接不稳或下载速度不足的时候用，然后用完马上关掉」——加速类功能要按需临时启用、用完即释放，不要常驻后台、不要改系统。
+⚠️ **2026-10-07 实测补充**：本机 `web_fetch https://github.com/...` 会被直接拒绝，报 `URL hostname "github.com" resolves to a non-public IP address`（疑似加速器改了域名解析）—— 所以**查/取 GitHub 一律走 gh CLI 或 git**（`gh api`、`gh repo view`、`git clone/fetch`），别用 web_fetch；要看仓库文档就 fetch raw.githubusercontent.com 或直接读本地已有 clone。
+
+`关键词：["Steam++加速器", "Watt Toolkit", "网络环境", "GitHub大文件", "连接超时", "依赖加速器", "按需启用", "用完马上关掉", "不要常驻", "裸网测试"]`
